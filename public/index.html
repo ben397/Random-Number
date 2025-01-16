@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Random Number Selector</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #1a237e, #eceff1);
+      font-family: Arial, sans-serif;
+      color: #fff;
+    }
+
+    .container {
+      text-align: center;
+    }
+
+    input[type="text"] {
+      padding: 10px;
+      width: 80%;
+      max-width: 300px;
+      margin-bottom: 20px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+
+    #getNumberLink {
+      display: inline-block;
+      padding: 15px 30px;
+      background-color: #ff6f61;
+      color: white;
+      text-decoration: none;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      transition: transform 0.3s, box-shadow 0.3s;
+      cursor: pointer;
+    }
+
+    #getNumberLink:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    #result {
+      margin-top: 20px;
+      font-size: 24px;
+      text-align: center;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <input type="text" id="userName" placeholder="Enter your name" />
+    <a href="#" id="getNumberLink">Click to get a random number</a>
+    <p id="result"></p>
+  </div>
+
+  <script>
+    const getNumberLink = document.getElementById("getNumberLink");
+    const userNameInput = document.getElementById("userName");
+    const resultElement = document.getElementById("result");
+
+    getNumberLink.addEventListener("click", async (event) => {
+      event.preventDefault();
+
+      const name = userNameInput.value.trim();
+      if (!name) {
+        resultElement.innerText = "Please enter your name first.";
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/get-number", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name }),
+        });
+
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+
+        const data = await response.json();
+        resultElement.innerText = `Hello, ${data.name}! Your number is: ${data.number}`;
+        getNumberLink.style.pointerEvents = "none"; // Disable further clicks
+        getNumberLink.style.backgroundColor = "#ccc"; // Visual feedback
+      } catch (error) {
+        resultElement.innerText = `Error: ${error.message}`;
+      }
+    });
+  </script>
+</body>
+</html>
