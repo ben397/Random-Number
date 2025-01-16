@@ -70,36 +70,44 @@
 </head>
 <body>
   <div class="container">
-    <h1>Random Number Selector</h1>
-    <input type="text" id="name" placeholder="Enter your name" />
-    <button id="submit">Get Number</button>
+    <input type="text" id="userName" placeholder="Enter your name" />
+    <a href="#" id="getNumberLink">Click to get a random number</a>
     <p id="result"></p>
   </div>
 
   <script>
-    document.getElementById("submit").addEventListener("click", async () => {
-      const name = document.getElementById("name").value.trim();
-      const resultElement = document.getElementById("result");
+    const getNumberLink = document.getElementById("getNumberLink");
+    const userNameInput = document.getElementById("userName");
+    const resultElement = document.getElementById("result");
 
+    getNumberLink.addEventListener("click", async (event) => {
+      event.preventDefault();
+
+      const name = userNameInput.value.trim();
       if (!name) {
-        resultElement.textContent = "Please enter your name.";
+        resultElement.innerText = "Please enter your name first.";
         return;
       }
 
-      const ip = await fetch("https://api64.ipify.org?format=json").then((res) =>
-        res.json().then((data) => data.ip)
-      );
-
       try {
-        const response = await fetch("/api/get-number", {
+        const response = await fetch("http://localhost:3000/get-number", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, ip }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name }),
         });
+
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+
         const data = await response.json();
-        resultElement.textContent = data.message || `Your number is: ${data.number}`;
+        resultElement.innerText = `Hello, ${data.name}! Your number is: ${data.number}`;
+        getNumberLink.style.pointerEvents = "none"; // Disable further clicks
+        getNumberLink.style.backgroundColor = "#ccc"; // Visual feedback
       } catch (error) {
-        resultElement.textContent = "An error occurred. Try again later.";
+        resultElement.innerText = `Error: ${error.message}`;
       }
     });
   </script>

@@ -1,67 +1,37 @@
-const { createClient } = require("@supabase/supabase-js");
+const express = require("express");
+const cors = require("cors");
 
-const SUPABASE_URL = "https://bmtghldecntlolkdkjqk.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtdGdobGRlY250bG9sa2RranFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzcwMjUxMTEsImV4cCI6MjA1MjYwMTExMX0.VgHPvCeSUnT9NPQwFk77krtkTRaui_aJ72TubTCjcSc";
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const app = express();
+app.use(cors()); // Enable CORS for cross-origin requests
+app.use(express.json());
 
-exports.handler = async (event) => {
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: "Method not allowed" };
+let availableNumbers = [1, 2, 3, 4, 5, 6];
+const users = {}; // Store selected numbers by IP (or name if needed)
+
+app.post("/get-number", (req, res) => {
+  const { name } = req.body;
+  const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+
+  if (!name) {
+    return res.status(400).send("Name is required.");
   }
 
-  const { name, ip } = JSON.parse(event.body);
-
-  if (!name || !ip) {
-    return { statusCode: 400, body: JSON.stringify({ message: "Name and IP are required." }) };
+  if (users[ip]) {
+    return res.status(400).send("You have already selected a number.");
   }
 
-  try {
-    // Check if IP has already selected a number
-    const { data: existingUser, error: checkError } = await supabase
-      .from("selections")
-      .select("*")
-      .eq("ip", ip)
-      .single();
-
-    if (existingUser) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ message: "You have already selected a number." }),
-      };
-    }
-
-    // Get available numbers
-    const { data: availableNumbers, error: fetchError } = await supabase
-      .from("selections")
-      .select("number");
-
-    const takenNumbers = availableNumbers.map((item) => item.number);
-    const allNumbers = [1, 2, 3, 4, 5, 6];
-    const remainingNumbers = allNumbers.filter((n) => !takenNumbers.includes(n));
-
-    if (remainingNumbers.length === 0) {
-      return { statusCode: 400, body: JSON.stringify({ message: "All numbers are taken." }) };
-    }
-
-    // Assign a random number
-    const randomIndex = Math.floor(Math.random() * remainingNumbers.length);
-    const selectedNumber = remainingNumbers[randomIndex];
-
-    // Save to database
-    const { data, error } = await supabase
-      .from("selections")
-      .insert([{ name, number: selectedNumber, ip }]);
-
-    if (error) throw error;
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ message: "Number assigned!", number: selectedNumber }),
-    };
-  } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ message: "An error occurred.", error: error.message }),
-    };
+  if (availableNumbers.length === 0) {
+    return res.status(400).send("All numbers have been taken.");
   }
-};
+
+  const randomIndex = Math.floor(Math.random() * availableNumbers.length);
+  const selectedNumber = availableNumbers.splice(randomIndex, 1)[0];
+  users[ip] = { name, number: selectedNumber }; // Track the user's IP and selected number
+
+  res.json({ name, number: selectedNumber });
+});
+
+const PORT = 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
+});
